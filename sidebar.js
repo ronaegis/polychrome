@@ -701,9 +701,22 @@ function closeTab() {
   });
 }
 
-function popOutSidebar(id) {
+async function popOutSidebar(id) {
+  let url = chrome.runtime.getURL("sidebar.html");
+  let tabs = await chrome.tabs.query({url:url});
+
+  // If any sidebar already exists, just focus it (don't create new ones)
+  if (tabs.length > 0) {
+    // Find a different sidebar window (not the current one) or focus the current one
+    let otherSidebar = tabs.find(tab => tab.windowId !== myWindowId);
+    let targetSidebar = otherSidebar || tabs[0];
+    chrome.windows.update(targetSidebar.windowId, {focused: true});
+    return;
+  }
+  
+  // Only create new sidebar if none exists (besides current one)
   chrome.windows.create({
-    url: chrome.runtime.getURL("sidebar.html"),
+    url: url,
     type: "popup",
     width:256,
     height:window.screen.availHeight,
@@ -751,8 +764,7 @@ function updateWindows(...args) {
       scrollToElement(el);
     }
     
-    // Position sidebar when windows are updated
-    positionSidebarToActiveWindow();
+    // Removed positionSidebarToActiveWindow() to prevent unwanted resizing
   });
   return;
 }
@@ -855,26 +867,121 @@ chrome.tabGroups.onCreated.addListener(updateWindows.bind(""));
 chrome.tabGroups.onMoved.addListener(updateWindows.bind(""));
 chrome.tabGroups.onRemoved.addListener(updateWindows.bind(""));
 chrome.tabGroups.onUpdated.addListener(updateGroup);
-chrome.windows.onCreated.addListener(updateWindows.bind(""));
-chrome.windows.onRemoved.addListener(updateWindows.bind(""));
-chrome.windows.onFocusChanged.addListener((w) => {
-  if (w != myWindowId && w > 0) {
+chrome.windows.onCreated.addListener((window) => {
+  updateWindows();
+  positionSidebarToActiveWindow();
+});
+chrome.windows.onRemoved.addListener((window) => {
+  updateWindows();
+  positionSidebarToActiveWindow();
+});
+let isRefocusing = false;
+
+chrome.windows.onFocusChanged.addListener(async (w) => {
+  if (w != myWindowId && w > 0 && !isRefocusing) {
     lastWindowId = w;
     updateWindows();
-    positionSidebarToActiveWindow();
+    // Remove positionSidebarToActiveWindow() to prevent resizing on focus
+    
+    // Always show sidebar when a Chrome window gains focus, but don't steal focus or reposition
+    await ensureSidebarVisible(w, false); // false = don't reposition
+  }
+});
+
+// Function to ensure sidebar is visible when Chrome windows are focused
+async function ensureSidebarVisible(focusedWindowId, shouldReposition = true) {
+  if (isRefocusing) return; // Prevent loops
+  
+  try {
+    const sidebarWindow = await chrome.windows.get(myWindowId);
+    
+    // Always ensure sidebar is visible
+    if (sidebarWindow.state === 'minimized') {
+      await chrome.windows.update(myWindowId, { state: 'normal' });
+    }
+    
+    // Bring sidebar to front by briefly focusing it, then immediately refocus Chrome
+    await chrome.windows.update(myWindowId, { focused: true });
+    
+    // Only reposition if requested (not for focus-triggered events)
+    if (shouldReposition) {
+      positionSidebarToActiveWindow();
+    }
+    
+    // Prevent infinite loop when refocusing
+    isRefocusing = true;
+    setTimeout(() => {
+      chrome.windows.update(focusedWindowId, { focused: true });
+      setTimeout(() => {
+        isRefocusing = false;
+      }, 100);
+    }, 10);
+    
+  } catch (error) {
+    console.log("Error ensuring sidebar visibility:", error);
+    isRefocusing = false;
+  }
+}
+
+// Only keep the original tab activation listener for window updates, not sidebar visibility
+chrome.tabs.onActivated.addListener(updateWindows.bind("tabs.onActivated"));
+
+// Additional listeners to catch more focus scenarios
+chrome.tabs.onActivated.addListener(async (info) => {
+  if (info.windowId !== myWindowId && !isRefocusing) {
+    // When a tab is activated, ensure sidebar is visible (indicates user activity)
+    await ensureSidebarVisible(info.windowId, false);
+  }
+});
+
+// Listen for tab updates that might indicate window interaction
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (tab.windowId !== myWindowId && !isRefocusing && changeInfo.active === true) {
+    // When a tab becomes active, ensure sidebar is visible
+    await ensureSidebarVisible(tab.windowId, false);
   }
 });
 
 // Add window bounds change listener to track window movement and resizing
 chrome.windows.onBoundsChanged.addListener((window) => {
   if (window.id !== myWindowId && window.id === lastWindowId) {
+    // Reposition sidebar when Chrome window moves or resizes
     positionSidebarToActiveWindow();
+    handleWindowStateChange(window);
   }
 });
 
+// Handle window minimize/restore state changes
+async function handleWindowStateChange(window) {
+  if (!myWindowId || window.id !== lastWindowId) return;
+  
+  try {
+    const activeWindow = await chrome.windows.get(lastWindowId);
+    const sidebarWindow = await chrome.windows.get(myWindowId);
+    
+    // Check if the active window state has changed
+    if (activeWindow.state === 'minimized' && sidebarWindow.state !== 'minimized') {
+      // Minimize sidebar when main window is minimized
+      await chrome.windows.update(myWindowId, { state: 'minimized' });
+    } else if (activeWindow.state === 'normal' && sidebarWindow.state === 'minimized') {
+      // Restore sidebar when main window is restored
+      await chrome.windows.update(myWindowId, { state: 'normal' });
+      // Reposition sidebar after restore
+      positionSidebarToActiveWindow();
+    }
+  } catch (error) {
+    console.log("Error handling window state change:", error);
+  }
+}
+
 updateWindows()
 
-
+// Initial positioning when sidebar loads
+setTimeout(() => {
+  if (myWindowId && lastWindowId) {
+    positionSidebarToActiveWindow();
+  }
+}, 500); // Small delay to ensure windows are fully loaded
 
 
 //

@@ -44,22 +44,26 @@ const DEFAULT_WIDTH = 256;
 async function toggleSidebar() {
   let url = chrome.runtime.getURL("sidebar.html");
   let tabs = await chrome.tabs.query({url:url});
+  let popupWindows = await chrome.windows.getAll({populate:true, windowTypes:['popup']});
+  let sidebarWindows = popupWindows.filter(w => w.tabs.some(tab => tab.url === url));
   let win = await chrome.windows.getLastFocused({populate:true, windowTypes:['normal']})
-  if (tabs.length) {
-    let sidebarId = tabs[0].windowId;
+  
+  if (tabs.length || sidebarWindows.length) {
+    // Use the found sidebar (prefer tabs result, fallback to popup windows)
+    let sidebarId = tabs.length ? tabs[0].windowId : sidebarWindows[0].id;
     let sidebar = await chrome.windows.get(sidebarId)
-    console.log(tabs[0], sidebar);
-      if (sidebar.focused) {
-        chrome.windows.remove(sidebarId)
-        console.log(sidebar.height, win.height, win.left, sidebar.width)
-        if (sidebar.height >= win.height && win.left >= sidebar.width) {
-          await chrome.windows.update(win.id, {width: win.width + sidebar.width, left:win.left - sidebar.width});
-        }
-      } else {
-        chrome.windows.update(sidebarId, {focused:true})
-      }
+    
+    // Always make the existing sidebar visible, don't remove it
+    if (sidebar.state === 'minimized') {
+      await chrome.windows.update(sidebarId, {state: 'normal'});
+    }
+    // Bring sidebar to front without focusing it
+    await chrome.windows.update(sidebarId, {focused: true});
+    // Immediately refocus the Chrome window to maintain workflow
+    setTimeout(() => {
+      chrome.windows.update(win.id, {focused: true});
+    }, 50);
   } else {
-    console.log(win, url);
     let adjustWindow = win.left < DEFAULT_WIDTH;
     await chrome.windows.create({
       url: url,
