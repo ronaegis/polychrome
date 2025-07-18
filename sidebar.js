@@ -750,6 +750,9 @@ function updateWindows(...args) {
       let el = document.getElementById(id);
       scrollToElement(el);
     }
+    
+    // Position sidebar when windows are updated
+    positionSidebarToActiveWindow();
   });
   return;
 }
@@ -764,6 +767,31 @@ function scrollToElement(el) {
   var isVisible = (elemTop >= 0) && (elemBottom <= window.innerHeight);
 
   el.scrollIntoView({behavior: "auto", block: "nearest"});
+}
+
+async function positionSidebarToActiveWindow() {
+  if (!myWindowId || !lastWindowId || myWindowId === lastWindowId) {
+    return;
+  }
+
+  try {
+    // Get the current active window
+    const activeWindow = await chrome.windows.get(lastWindowId);
+    // Get the sidebar window
+    const sidebarWindow = await chrome.windows.get(myWindowId);
+    
+    // Position the sidebar to the left side of the active window
+    const newLeft = activeWindow.left - sidebarWindow.width;
+    
+    // Update sidebar position to follow the active window
+    await chrome.windows.update(myWindowId, {
+      left: Math.max(0, newLeft), // Ensure it doesn't go off-screen to the left
+      top: activeWindow.top,
+      height: activeWindow.height
+    });
+  } catch (error) {
+    console.log("Error positioning sidebar:", error);
+  }
 }
 
 function updateTab(tabId, changeInfo, tab) {
@@ -817,6 +845,14 @@ chrome.windows.onFocusChanged.addListener((w) => {
   if (w != myWindowId && w > 0) {
     lastWindowId = w;
     updateWindows();
+    positionSidebarToActiveWindow();
+  }
+});
+
+// Add window bounds change listener to track window movement and resizing
+chrome.windows.onBoundsChanged.addListener((window) => {
+  if (window.id !== myWindowId && window.id === lastWindowId) {
+    positionSidebarToActiveWindow();
   }
 });
 
