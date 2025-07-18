@@ -24,6 +24,7 @@ Polychrome lets you more carefully curate, group, and archive your tabs, buildin
 
 ### Tab Navigation & Visibility  
 - **Improved Tab Visibility**: Fixed sidebar scrolling to ensure active tabs are always visible when switching tabs, accounting for the toolbar height to prevent tabs from being hidden behind the search bar
+- **Visual Tab State Indicators**: Added dimming for unloaded and sleeping tabs to clearly distinguish between loaded (bright), loading (dimmed), and sleeping (dimmed + desaturated) tabs
 - **Instant Scrolling**: Disabled smooth scrolling for faster navigation between tabs
 
 ### Sidebar Instance Management

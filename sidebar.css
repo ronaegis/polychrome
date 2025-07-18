@@ -457,23 +457,42 @@ body:not(.menu):not(.search) .tab.pinned .icon {
   xxfont-style: oblique;
 }
 
-.tab.discarded:not(:hover) .icon {
-  filter: saturate(0.0);
-  opacity:0.5;
-  
+/* Dim sleeping/discarded tabs */
+.tab.discarded:not(:hover) {
+  opacity: 0.75;
 }
 
-.tab.loading:not(.pinned) {
+.tab.discarded:not(:hover) .icon {
+  filter: saturate(0.0);
+  opacity: 0.4;
+}
+
+.tab.discarded:not(:hover) .title {
+  opacity: 0.6;
+}
+
+/* Dim loading/unloaded tabs */
+.tab.loading:not(.pinned):not(:hover),
+.tab.unloaded:not(.pinned):not(:hover),
+.tab:not(.complete):not(.active):not(.pinned):not(:hover) {
+  opacity: 0.75;
+}
+
+.tab.loading:not(:hover) .icon,
+.tab.unloaded:not(:hover) .icon,
+.tab:not(.complete):not(.active):not(:hover) .icon {
+  opacity: 0.4;
+  transform: scale(0.6);
+}
+
+.tab.loading:not(:hover) .title,
+.tab.unloaded:not(:hover) .title,
+.tab:not(.complete):not(.active):not(:hover) .title {
   opacity: 0.6;
 }
 
 .tab:not(.loading) .loader {
   display: none;
-}
-
-.tab.loading .icon {
-  opacity:0.5;
-  transform:scale(0.6);
 }
 
 
