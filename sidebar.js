@@ -763,7 +763,7 @@ function scrollToElement(el) {
   // Only completely visible elements return true:
   var isVisible = (elemTop >= 0) && (elemBottom <= window.innerHeight);
 
-  el.scrollIntoView({behavior: "smooth", block: "nearest"});
+  el.scrollIntoView({behavior: "auto", block: "nearest"});
 }
 
 function updateTab(tabId, changeInfo, tab) {
