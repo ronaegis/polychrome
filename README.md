@@ -19,6 +19,7 @@ Polychrome lets you more carefully curate, group, and archive your tabs, buildin
 - **Automatic Window Positioning**: Sidebar now automatically follows the active Chrome window, positioning itself at the left edge and matching the window's height
 - **Instant Scrolling**: Disabled smooth scrolling for faster navigation between tabs
 - **Enhanced Window Tracking**: Added listeners for window movement and resize events to maintain optimal sidebar positioning
+- **Improved Tab Visibility**: Fixed sidebar scrolling to ensure active tabs are always visible when switching tabs, accounting for the toolbar height to prevent tabs from being hidden behind the search bar
 
 ## Usage:
 

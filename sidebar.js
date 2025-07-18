@@ -762,11 +762,27 @@ function scrollToElement(el) {
   var rect = el.getBoundingClientRect();
   var elemTop = rect.top;
   var elemBottom = rect.bottom;
+  
+  // Get toolbar height to account for sticky positioning
+  var toolbar = document.querySelector('.toolbar');
+  var toolbarHeight = toolbar ? toolbar.offsetHeight : 50;
 
-  // Only completely visible elements return true:
-  var isVisible = (elemTop >= 0) && (elemBottom <= window.innerHeight);
+  // Check if element is fully visible (accounting for toolbar)
+  var isFullyVisible = (elemTop >= toolbarHeight) && (elemBottom <= window.innerHeight);
 
-  el.scrollIntoView({behavior: "auto", block: "nearest"});
+  if (!isFullyVisible) {
+    // If element is above viewport or behind toolbar
+    if (elemTop < toolbarHeight) {
+      // Manually scroll to position element below toolbar
+      var elementOffsetTop = el.offsetTop;
+      var scrollTarget = elementOffsetTop - toolbarHeight - 8; // 8px padding
+      window.scrollTo({top: Math.max(0, scrollTarget), behavior: "auto"});
+    }
+    // If element is below viewport, scroll to end
+    else if (elemBottom > window.innerHeight) {
+      el.scrollIntoView({behavior: "auto", block: "end"});
+    }
+  }
 }
 
 async function positionSidebarToActiveWindow() {
