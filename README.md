@@ -6,11 +6,19 @@
 
 # Polychrome
 
+> Forked from [arfct/polychrome](https://github.com/arfct/polychrome)
+
 Polychrome adds a sidebar with tabs and groups to the left of your browser window. 
 
 Now that Chrome is able to unload background tabs on its own, having many, many tabs becomes worthwhile — and the tab strip is woefully unprepared.
 
 Polychrome lets you more carefully curate, group, and archive your tabs, building a familiar structure and giving you quick access to the things you need.
+
+## Recent Enhancements
+
+- **Automatic Window Positioning**: Sidebar now automatically follows the active Chrome window, positioning itself at the left edge and matching the window's height
+- **Instant Scrolling**: Disabled smooth scrolling for faster navigation between tabs
+- **Enhanced Window Tracking**: Added listeners for window movement and resize events to maintain optimal sidebar positioning
 
 ## Usage:
 
