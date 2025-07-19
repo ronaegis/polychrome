@@ -900,9 +900,6 @@ async function ensureSidebarVisible(focusedWindowId, shouldReposition = true) {
       await chrome.windows.update(myWindowId, { state: 'normal' });
     }
     
-    // Bring sidebar to front by briefly focusing it, then immediately refocus Chrome
-    await chrome.windows.update(myWindowId, { focused: true });
-    
     // Only reposition if requested (not for focus-triggered events)
     if (shouldReposition) {
       positionSidebarToActiveWindow();
@@ -910,12 +907,12 @@ async function ensureSidebarVisible(focusedWindowId, shouldReposition = true) {
     
     // Prevent infinite loop when refocusing
     isRefocusing = true;
-    setTimeout(() => {
-      chrome.windows.update(focusedWindowId, { focused: true });
-      setTimeout(() => {
-        isRefocusing = false;
-      }, 100);
-    }, 10);
+    
+    // Sequential calls: focus sidebar, then refocus chrome active window
+    await chrome.windows.update(myWindowId, { focused: true });
+    await chrome.windows.update(focusedWindowId, { focused: true });
+    
+    isRefocusing = false;
     
   } catch (error) {
     console.log("Error ensuring sidebar visibility:", error);
@@ -1108,20 +1105,36 @@ var Toolbar = function(vnode) {
 
 
 var Search = function(vnode) {
+  // Blur search element when sidebar gets activated, as to not steal the focus
+  function handleWindowFocus() {
+    const searchInput = document.getElementById('search');
+    if (document.activeElement === searchInput) {
+      searchInput.blur();
+    }
+  }
+
   return {
+    oncreate: function() {
+      window.addEventListener('focus', handleWindowFocus);
+    },
+    onremove: function() {
+      window.removeEventListener('focus', handleWindowFocus);
+    },
     view: function() {
       return [
         m("div.search", m("input#search", {
-          type:"search", 
-          key:"search", 
-          placeholder:"search",
+          type: "search",
+          key: "search",
+          placeholder: "search",
           oninput: searchInput,
-          onkeydown: searchKey, 
-          autocomplete:"off"}))
-      ]  
+          onkeydown: searchKey,
+          autocomplete: "off",
+          autofocus: false
+        }))
+      ];
     }
-  }
-}
+  };
+};
 
 
 var WindowList = function(vnode) {
